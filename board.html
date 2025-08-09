@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kanban Board</title>
+<style>
+  body { background-color: #121212; color: #eee; font-family: sans-serif; margin: 0; padding: 0; }
+  h2 { text-align: center; padding: 10px; margin: 0; }
+  .back { position: absolute; left: 10px; top: 10px; background: #333; padding: 5px 10px; border-radius: 5px; text-decoration: none; color: #fff; }
+  .board { display: flex; gap: 10px; padding: 10px; height: calc(100vh - 50px); box-sizing: border-box; }
+  .column { background: #1e1e1e; flex: 1; border-radius: 8px; display: flex; flex-direction: column; }
+  .column-header { padding: 10px; font-weight: bold; text-align: center; border-bottom: 1px solid #333; }
+  .task-list { flex: 1; padding: 10px; overflow-y: auto; }
+  .task { background: #2b2b2b; padding: 8px; margin-bottom: 8px; border-radius: 6px; cursor: grab; display: flex; align-items: center; justify-content: space-between; }
+  .task[contenteditable="true"] { outline: 2px solid #555; }
+  .task input[type="color"] { border: none; background: transparent; cursor: pointer; margin-right: 5px; }
+  .delete-btn { background: #ff5555; color: white; border: none; border-radius: 4px; padding: 2px 6px; cursor: pointer; }
+  .add-task { display: flex; padding: 10px; border-top: 1px solid #333; }
+  .add-task input { flex: 1; padding: 5px; border: none; border-radius: 4px; margin-right: 5px; }
+  .add-task button { padding: 5px 10px; border: none; border-radius: 4px; background: #4caf50; color: white; cursor: pointer; }
+</style>
+</head>
+<body>
+<a class="back" href="todo.html">← Back</a>
+<h2 id="boardTitle"></h2>
+<div class="board">
+  <div class="column" data-status="todo">
+    <div class="column-header">To Do</div>
+    <div class="task-list"></div>
+    <div class="add-task"><input type="text" placeholder="New task..."><button>Add</button></div>
+  </div>
+  <div class="column" data-status="inprogress">
+    <div class="column-header">In Progress</div>
+    <div class="task-list"></div>
+    <div class="add-task"><input type="text" placeholder="New task..."><button>Add</button></div>
+  </div>
+  <div class="column" data-status="done">
+    <div class="column-header">Complete</div>
+    <div class="task-list"></div>
+    <div class="add-task"><input type="text" placeholder="New task..."><button>Add</button></div>
+  </div>
+</div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const boardName = params.get('name');
+  document.getElementById('boardTitle').innerText = boardName;
+
+  let boardsData = JSON.parse(localStorage.getItem('kanbanBoards') || '{}');
+  if (!boardsData[boardName]) {
+    boardsData[boardName] = { todo: [], inprogress: [], done: [] };
+  }
+
+  let draggedTask = null;
+
+  function saveBoard() {
+    document.querySelectorAll('.column').forEach(col => {
+      const status = col.dataset.status;
+      boardsData[boardName][status] = [];
+      col.querySelectorAll('.task').forEach(task => {
+        boardsData[boardName][status].push({
+          text: task.querySelector('.text').innerText,
+          color: task.querySelector('input[type="color"]').value
+        });
+      });
+    });
+    localStorage.setItem('kanbanBoards', JSON.stringify(boardsData));
+  }
+
+  function loadBoard() {
+    const data = boardsData[boardName];
+    for (const status in data) {
+      const list = document.querySelector(`.column[data-status="${status}"] .task-list`);
+      data[status].forEach(task => createTask(list, task.text, task.color));
+    }
+  }
+
+  function createTask(list, text, color = '#4caf50') {
+    const task = document.createElement('div');
+    task.className = 'task';
+    task.draggable = true;
+    task.innerHTML = `
+      <input type="color" value="${color}">
+      <div class="text" contenteditable="false">${text}</div>
+      <button class="delete-btn">×</button>
+    `;
+    task.querySelector('.text').addEventListener('dblclick', e => {
+      e.target.contentEditable = true;
+      e.target.focus();
+    });
+    task.querySelector('.text').addEventListener('blur', e => {
+      e.target.contentEditable = false;
+      saveBoard();
+    });
+    task.querySelector('input[type="color"]').addEventListener('input', saveBoard);
+    task.querySelector('.delete-btn').addEventListener('click', () => {
+      task.remove();
+      saveBoard();
+    });
+    task.addEventListener('dragstart', () => {
+      draggedTask = task;
+      setTimeout(() => task.style.display = 'none', 0);
+    });
+    task.addEventListener('dragend', () => {
+      draggedTask.style.display = 'flex';
+      draggedTask = null;
+      saveBoard();
+    });
+    list.appendChild(task);
+  }
+
+  document.querySelectorAll('.add-task button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = btn.previousElementSibling;
+      const text = input.value.trim();
+      if (!text) return;
+      const list = btn.closest('.column').querySelector('.task-list');
+      createTask(list, text);
+      saveBoard();
+      input.value = '';
+    });
+  });
+
+  document.querySelectorAll('.task-list').forEach(list => {
+    list.addEventListener('dragover', e => e.preventDefault());
+    list.addEventListener('drop', () => {
+      if (draggedTask) {
+        list.appendChild(draggedTask);
+        saveBoard();
+      }
+    });
+  });
+
+  loadBoard();
+</script>
+</body>
+</html>
