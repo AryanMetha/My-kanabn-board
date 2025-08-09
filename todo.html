@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Boards</title>
+<style>
+  body {
+    background-color: #121212;
+    color: #eee;
+    font-family: sans-serif;
+    margin: 0;
+    padding: 20px;
+  }
+  h1 { text-align: center; }
+  .board-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+  }
+  .board-item {
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 8px;
+    width: 200px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    position: relative;
+  }
+  .board-item:hover { background: #2a2a2a; }
+  .delete-btn {
+    position: absolute;
+    top: 5px;
+    right: 8px;
+    background: #ff5555;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .new-board {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .new-board input {
+    padding: 5px;
+    border: none;
+    border-radius: 4px;
+    margin-right: 5px;
+  }
+  .new-board button {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    background: #4caf50;
+    color: white;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<h1>My Boards</h1>
+<div class="board-list" id="boardList"></div>
+<div class="new-board">
+  <input type="text" id="boardName" placeholder="New board name...">
+  <button onclick="addBoard()">Create</button>
+</div>
+
+<script>
+function loadBoards() {
+  const data = JSON.parse(localStorage.getItem('kanbanBoards') || '{}');
+  const list = document.getElementById('boardList');
+  list.innerHTML = '';
+  Object.keys(data).forEach(name => {
+    const div = document.createElement('div');
+    div.className = 'board-item';
+    div.innerHTML = `<button class="delete-btn" onclick="deleteBoard('${name}', event)">×</button>${name}`;
+    div.onclick = () => { window.location.href = 'board.html?name=' + encodeURIComponent(name); };
+    list.appendChild(div);
+  });
+}
+
+function addBoard() {
+  const name = document.getElementById('boardName').value.trim();
+  if (!name) return;
+  const data = JSON.parse(localStorage.getItem('kanbanBoards') || '{}');
+  if (!data[name]) {
+    data[name] = { todo: [], inprogress: [], done: [] };
+    localStorage.setItem('kanbanBoards', JSON.stringify(data));
+    loadBoards();
+  }
+  document.getElementById('boardName').value = '';
+}
+
+function deleteBoard(name, e) {
+  e.stopPropagation();
+  const data = JSON.parse(localStorage.getItem('kanbanBoards') || '{}');
+  delete data[name];
+  localStorage.setItem('kanbanBoards', JSON.stringify(data));
+  loadBoards();
+}
+
+loadBoards();
+</script>
+</body>
+</html>
